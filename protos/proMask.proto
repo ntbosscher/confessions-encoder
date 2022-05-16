@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package rv.data;
+option go_package = "confessions-encoder/protos";
+
+import "slide.proto";
+
+message ProMask {
+  rv.data.Slide base_slide = 1;
+  string name = 2;
+
+}

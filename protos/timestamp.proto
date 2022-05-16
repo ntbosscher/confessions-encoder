@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package rv.data;
+option go_package = "confessions-encoder/protos";
+
+
+message Timestamp {
+  int64 seconds = 1;
+  int32 nanos = 2;
+
+}

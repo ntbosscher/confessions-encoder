@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package rv.data;
+option go_package = "confessions-encoder/protos";
+
+import "action.proto";
+
+message ProLabelsDocument {
+  repeated rv.data.Action.Label labels = 1;
+
+}
