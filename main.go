@@ -218,8 +218,13 @@ func setContent(el *protos.Slide_Element, text string) {
 }
 
 func sanitizeRtf(text string) string {
+	if strings.Contains(text, "become for us wisdom from") {
+		fmt.Println(text)
+	}
 	text = strings.ReplaceAll(text, "\t", `     `)
 	text = strings.ReplaceAll(text, "\n", `\par `)
+	text = strings.ReplaceAll(text, "–", `\_`)
+	text = strings.ReplaceAll(text, " ", ` `)
 	return text
 }
 
@@ -293,60 +298,68 @@ func parseLD(file string) *Input {
 		log.Fatalln(err)
 	}
 
-	tbl := firstChildWithClassName(doc, "question-and-answer")
-	row := firstChildWithTagName(tbl, "tr")
+	tbls := childrenWithClass(doc, "question-and-answer")
 	buf := &bytes.Buffer{}
 
-	for row != nil {
-		if row.Type != html.ElementNode {
-			row = row.NextSibling
-			continue
+	for i, tbl := range tbls {
+
+		if i != 0 {
+			buf.WriteString(strings.Repeat("\n", 10))
 		}
 
-		if firstChildWithClassName(row, "ld-footnotes") != nil {
-			// ignore footnotes
-			row = row.NextSibling
-			continue
-		}
+		row := firstChildWithTagName(tbl, "tr")
 
-		numberEl := firstChildWithClassName(row, "number")
-		if numberEl != nil {
-			n := strings.TrimSuffix(numberEl.FirstChild.Data, ".")
-			buf.WriteString(n + ". ")
-		}
+		for row != nil {
+			if row.Type != html.ElementNode {
+				row = row.NextSibling
+				continue
+			}
 
-		titleEl := firstChildWithTagName(row, "h2")
-		if titleEl != nil {
-			title := extractText(titleEl, nil, nil).String()
-			title = strings.ReplaceAll(strings.ReplaceAll(title, "\n", " "), "  ", " ")
-			buf.WriteString(title + "\n")
-		} else {
+			if firstChildWithClassName(row, "ld-footnotes") != nil {
+				// ignore footnotes
+				row = row.NextSibling
+				continue
+			}
 
-			buf.WriteString("\n")
-			lastIndent := false
+			numberEl := firstChildWithClassName(row, "number")
+			if numberEl != nil {
+				n := strings.TrimSuffix(numberEl.FirstChild.Data, ".")
+				buf.WriteString(n + ". ")
+			}
 
-			for _, item := range childrenWithClass(row, "line") {
-				isIndent := hasClass(item, "indented")
+			titleEl := firstChildWithTagName(row, "h2")
+			if titleEl != nil {
+				title := extractText(titleEl, nil, nil).String()
+				title = strings.ReplaceAll(strings.ReplaceAll(title, "\n", " "), "  ", " ")
+				buf.WriteString(title + "\n")
+			} else {
 
-				if lastIndent && !isIndent {
-					// add extra line break after paragraph
-					buf.WriteString("\n")
-				}
+				buf.WriteString("\n")
+				lastIndent := false
 
-				lastIndent = isIndent
+				for _, item := range childrenWithClass(row, "line") {
+					isIndent := hasClass(item, "indented")
 
-				extractText(item, buf, func(item *html.Node) bool {
-					// ignore superscripts
-					if item.Type == html.ElementNode && item.Data == "sup" {
-						return false
+					if lastIndent && !isIndent {
+						// add extra line break after paragraph
+						buf.WriteString("\n")
 					}
 
-					return true
-				})
-			}
-		}
+					lastIndent = isIndent
 
-		row = row.NextSibling
+					extractText(item, buf, func(item *html.Node) bool {
+						// ignore superscripts
+						if item.Type == html.ElementNode && item.Data == "sup" {
+							return false
+						}
+
+						return true
+					})
+				}
+			}
+
+			row = row.NextSibling
+		}
 	}
 
 	name := filepath.Base(file)
